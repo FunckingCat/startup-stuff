@@ -403,8 +403,19 @@ url: <ссылка или «текст прислан вручную»>
 
 Run:
 ```bash
-grep -c "^## " CLAUDE.md && grep "^## " CLAUDE.md
+python3 - <<'EOS'
+import re
+inf=False; secs=[]
+for l in open('CLAUDE.md'):
+    if l.startswith('```'): inf = not inf; continue
+    if not inf and re.match(r'^## ', l): secs.append(l.rstrip())
+print(len(secs))
+for x in secs: print(x)
+EOS
 ```
+
+Заголовки внутри блоков кода (шаблоны страниц раздела 3) не считаются: наивный
+`grep -c "^## "` их подхватывает и даёт завышенное число.
 Expected: 5 разделов — `1. Назначение`, `2. Три слоя и владение`, `3. Типы страниц`, `4. Конвенции именования и связывания`, `13. Язык`.
 
 - [ ] **Step 3: Проверить, что каждый шаблон страницы содержит обязательные поля**
@@ -559,8 +570,19 @@ url: <ссылка или «текст прислан вручную»>
 
 Run:
 ```bash
-grep "^## " CLAUDE.md
+python3 - <<'EOS'
+import re
+inf=False; secs=[]
+for l in open('CLAUDE.md'):
+    if l.startswith('```'): inf = not inf; continue
+    if not inf and re.match(r'^## ', l): secs.append(l.rstrip())
+print(len(secs))
+for x in secs: print(x)
+EOS
 ```
+
+Заголовки внутри блоков кода (шаблоны страниц раздела 3) не считаются: наивный
+`grep -c "^## "` их подхватывает и даёт завышенное число.
 Expected: разделы идут по возрастанию — 1, 2, 3, 4, 5, 6, 7, 8, 13.
 
 - [ ] **Step 3: Проверить, что все четыре теста фильтра на месте**
@@ -735,15 +757,35 @@ description: Дайджест за период против забывания
 
 Run:
 ```bash
-grep "^## " CLAUDE.md && ls .claude/commands/
+python3 - <<'EOS'
+import re
+inf=False; secs=[]
+for l in open('CLAUDE.md'):
+    if l.startswith('```'): inf = not inf; continue
+    if not inf and re.match(r'^## ', l): secs.append(l.rstrip())
+print(len(secs))
+for x in secs: print(x)
+EOS
 ```
+
+Заголовки внутри блоков кода (шаблоны страниц раздела 3) не считаются: наивный
+`grep -c "^## "` их подхватывает и даёт завышенное число.
+
+Затем: `ls .claude/commands/`
 Expected: 13 разделов по порядку от `1. Назначение` до `13. Язык`; три файла команд.
 
 - [ ] **Step 6: Проверить критерий готовности 1 из спеки**
 
 Run:
 ```bash
-test "$(grep -c '^## ' CLAUDE.md)" = "13" && echo SCHEMA_COMPLETE
+python3 - <<'EOS'
+import re
+inf=False; n=0
+for l in open('CLAUDE.md'):
+    if l.startswith('```'): inf = not inf; continue
+    if not inf and re.match(r'^## ', l): n+=1
+print('SCHEMA_COMPLETE' if n==13 else 'SECTIONS='+str(n))
+EOS
 ```
 Expected: `SCHEMA_COMPLETE`.
 
@@ -931,7 +973,7 @@ Expected: линт отрабатывает без ошибок и выдаёт 
 
 Run:
 ```bash
-test "$(grep -c '^## ' CLAUDE.md)" = "13" && \
+test -f CLAUDE.md && \
 test -f me/context.md && \
 test "$(ls .claude/commands/ | wc -l)" -ge 3 && \
 test "$(ls raw/*.md | wc -l)" -ge 2 && \
@@ -939,6 +981,9 @@ test "$(grep -c '^## \[' log.md)" -ge 2 && \
 echo ALL_CRITERIA_MET
 ```
 Expected: `ALL_CRITERIA_MET`.
+
+Число разделов схемы проверяется отдельно, командой из Task 4 шаг 6: наивный
+`grep` по `^## ` считает и заголовки внутри блоков кода.
 
 - [ ] **Step 9: Коммит**
 
