@@ -12,9 +12,27 @@ import datetime
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
+
+def find_ytdlp():
+    """Сборка из pipx умеет подменять TLS-отпечаток, сборка из Homebrew — нет.
+
+    YouTube без этого отвечает 429 на эндпоинте субтитров, поэтому сборка
+    с impersonation предпочитается, если она установлена.
+    """
+    home = os.path.expanduser('~/.local/bin/yt-dlp')
+    if os.path.exists(home):
+        return home
+    found = shutil.which('yt-dlp')
+    if not found:
+        sys.exit('yt-dlp не найден. Установить: pipx install "yt-dlp[default,curl-cffi]"')
+    return found
+
+
+YTDLP = find_ytdlp()
 
 TRANSLIT = {
     'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
@@ -40,24 +58,42 @@ def slugify(text, limit=48):
     return slug or 'video'
 
 
-def run(cmd):
+def run(cmd, cookies=None, quiet=False):
+    """YouTube отдаёт 429 на субтитрах без авторизации — тогда повторяем с куками."""
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.returncode != 0:
-        sys.exit('yt-dlp упал:\n' + proc.stderr.strip())
-    return proc.stdout
+    if proc.returncode == 0:
+        return proc.stdout
+    if cookies:
+        if not quiet:
+            print('YouTube отказал, повтор с куками из %s' % cookies, file=sys.stderr)
+        proc = subprocess.run(cmd + ['--cookies-from-browser', cookies],
+                              capture_output=True, text=True)
+        if proc.returncode == 0:
+            return proc.stdout
+    sys.exit('yt-dlp упал:\n' + proc.stderr.strip())
 
 
 def pick_track(meta, want):
-    """Ручные субтитры важнее автоматических: у них есть пунктуация."""
+    """Язык оригинала важнее удобного.
+
+    YouTube отдаёт автосубтитры на десятках языков, но все кроме одного —
+    машинный перевод машинного же распознавания. Второй лишний слой искажает
+    формулировки незаметно, поэтому берётся язык, на котором говорят в кадре.
+    Авторские субтитры предпочитаются автоматическим: в них есть пунктуация.
+    """
     manual = meta.get('subtitles') or {}
     auto = meta.get('automatic_captions') or {}
-    order = [want, 'ru', 'en']
+    original = (meta.get('language') or '').split('-')[0]
+    order = [x for x in (want, original, 'en', 'ru') if x]
     for source, label in ((manual, 'авторские'), (auto, 'автоматические')):
-        available = [k for k in source if not k.endswith('-orig')] or list(source)
+        codes = sorted(source)
         for pref in order:
-            for code in available:
-                if code == pref or code.startswith(pref + '-'):
-                    return code, label
+            for match in (lambda c: c == pref,
+                          lambda c: c.startswith(pref + '-'),
+                          lambda c: c.split('-')[0] == pref):
+                for code in codes:
+                    if match(code):
+                        return code, label
     return None, None
 
 
@@ -110,20 +146,24 @@ def to_paragraphs(cues, bucket, width=600):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('url')
-    ap.add_argument('--lang', default='ru', help='предпочитаемый язык субтитров')
+    ap.add_argument('--lang', default=None,
+                    help='язык субтитров; по умолчанию берётся язык оригинала')
     ap.add_argument('--bucket', type=int, default=45, help='секунд между таймкодами')
     ap.add_argument('--out', default='raw', help='каталог назначения')
+    ap.add_argument('--cookies', default='chrome',
+                    help='браузер, из которого брать куки при отказе YouTube; none чтобы не пробовать')
     args = ap.parse_args()
 
-    meta = json.loads(run(['yt-dlp', '--dump-single-json', '--skip-download', args.url]))
+    cookies = None if args.cookies == 'none' else args.cookies
+    meta = json.loads(run([YTDLP, '--dump-single-json', '--skip-download', args.url], cookies))
     code, kind = pick_track(meta, args.lang)
     if not code:
         sys.exit('Субтитров нет ни на одном языке. Нужен запасной путь через распознавание аудио.')
 
     with tempfile.TemporaryDirectory() as tmp:
-        run(['yt-dlp', '--skip-download', '--write-subs', '--write-auto-subs',
+        run([YTDLP, '--skip-download', '--write-subs', '--write-auto-subs',
              '--sub-langs', code, '--sub-format', 'vtt/best', '--convert-subs', 'vtt',
-             '-o', os.path.join(tmp, 'sub'), args.url])
+             '-o', os.path.join(tmp, 'sub'), args.url], cookies)
         files = [f for f in os.listdir(tmp) if f.endswith('.vtt')]
         if not files:
             sys.exit('yt-dlp не отдал файл субтитров для языка ' + code)
