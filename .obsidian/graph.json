@@ -7,9 +7,27 @@
   "showOrphans": true,
   "collapse-color-groups": false,
   "colorGroups": [
-    { "query": "path:wiki/problems", "color": { "a": 1, "rgb": 14701138 } },
-    { "query": "path:wiki/concepts", "color": { "a": 1, "rgb": 5431378 } },
-    { "query": "path:wiki/people", "color": { "a": 1, "rgb": 11621088 } }
+    {
+      "query": "path:wiki/problems",
+      "color": {
+        "a": 1,
+        "rgb": 14701138
+      }
+    },
+    {
+      "query": "path:wiki/concepts",
+      "color": {
+        "a": 1,
+        "rgb": 5431378
+      }
+    },
+    {
+      "query": "path:wiki/people",
+      "color": {
+        "a": 1,
+        "rgb": 11621088
+      }
+    }
   ],
   "collapse-display": false,
   "showArrow": false,
@@ -21,6 +39,6 @@
   "repelStrength": 10,
   "linkStrength": 1,
   "linkDistance": 250,
-  "scale": 1,
+  "scale": 1.8624664546544907,
   "close": false
 }

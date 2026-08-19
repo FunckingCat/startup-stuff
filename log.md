@@ -6,3 +6,5 @@ Append-only. Формат заголовка записи фиксирован, 
 Последние пять записей: `grep "^## \[" log.md | tail -5`
 
 ## [2026-08-19] ingest | Do Things That Don't Scale
+
+## [2026-08-19] ingest | Perfection By Subtraction – The Minimum Feature Set
