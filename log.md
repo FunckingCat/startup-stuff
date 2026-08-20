@@ -16,3 +16,5 @@ Append-only. Формат заголовка записи фиксирован, 
 ## [2026-08-19] query | переносимость западного канона на РФ и СНГ
 
 ## [2026-08-19] ingest | The Best Way To Launch Your Startup
+
+## [2026-08-20] ingest | How to Get and Evaluate Startup Ideas
