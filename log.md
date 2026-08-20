@@ -20,3 +20,5 @@ Append-only. Формат заголовка записи фиксирован, 
 ## [2026-08-20] ingest | How to Get and Evaluate Startup Ideas
 
 ## [2026-08-20] ingest | Рецензия на книгу Роба Фицпатрика «Спроси маму»
+
+## [2026-08-20] ingest | Designing the Ideal Bootstrapped Business
